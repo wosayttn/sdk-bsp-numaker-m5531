@@ -49,15 +49,15 @@ The NuMicro® M5531 series microcontrollers stand out for their exceptional perf
 
 ## 2. Supported compiler
 
-Support GCC. More information of these compiler version as following:
+Support GCC and Keil MDK. More information of these compiler version as following:
 
 | IDE/Compiler  | Tested version            |
 | ---------- | ---------------------------- |
 | GCC        | GCC 10.3.1 20210824 (release) |
+| Keil MDK5  | Keil v5.40                   |
+| RT-Thread Studio | v2.2.6                 |
 
 ## 3. Drag & Drop Program Firmware
-
-Notice: Function WIP, please use the ICP Program as a substitute
 
 ### Step 1
 
