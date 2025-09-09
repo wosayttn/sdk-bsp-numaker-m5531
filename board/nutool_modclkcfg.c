@@ -120,7 +120,7 @@ void nutool_modclkcfg_deinit_dac(void)
 void nutool_modclkcfg_init_eadc0(void)
 {
     CLK_EnableModuleClock(EADC0_MODULE);
-    CLK_SetModuleClock(EADC0_MODULE, CLK_EADCSEL_EADC0SEL_PCLK0, CLK_EADCDIV_EADC0DIV(12));
+    CLK_SetModuleClock(EADC0_MODULE, CLK_EADCSEL_EADC0SEL_PCLK0, CLK_EADCDIV_EADC0DIV(16));
 
     return;
 }
@@ -1108,16 +1108,14 @@ void nutool_modclkcfg_deinit_lpgpio0(void)
     CLK_DisableModuleClock(LPGPIO0_MODULE);
 }
 
-void nutool_modclkcfg_init_npu0(void)
+void nutool_modclkcfg_init_fmc0(void)
 {
     /* Enable FMC0 module clock to keep FMC clock when CPU idle but NPU running*/
     CLK_EnableModuleClock(FMC0_MODULE);
-    CLK_EnableModuleClock(NPU0_MODULE);
 }
 
-void nutool_modclkcfg_deinit_npu0(void)
+void nutool_modclkcfg_deinit_fmc0(void)
 {
-    CLK_DisableModuleClock(NPU0_MODULE);
     CLK_DisableModuleClock(FMC0_MODULE);
 }
 
@@ -1408,10 +1406,7 @@ void nutool_modclkcfg_init(void)
 #if defined(BSP_USING_LPUART0)
     nutool_modclkcfg_init_lpuart0();
 #endif
-
-#if defined(NU_PKG_USING_MLEVK)
-    nutool_modclkcfg_init_npu0();
-#endif
+    nutool_modclkcfg_init_fmc0();
 
     nutool_modclkcfg_init_systick();
 

@@ -391,11 +391,11 @@ static int rt_hw_qspi_init(void)
         SYS_ResetModule(nu_qspi_arr[i].rstidx);
 
         nu_qspi_register_bus(&nu_qspi_arr[i], nu_qspi_arr[i].name);
+
 #if defined(BSP_USING_SPI_PDMA)
         nu_qspi_arr[i].pdma_chanid_tx = -1;
         nu_qspi_arr[i].pdma_chanid_rx = -1;
-#endif
-#if defined(BSP_USING_QSPI_PDMA)
+
         if ((nu_qspi_arr[i].pdma_perp_tx != NU_PDMA_UNUSED) && (nu_qspi_arr[i].pdma_perp_rx != NU_PDMA_UNUSED))
         {
             if (nu_hw_spi_pdma_allocate(&nu_qspi_arr[i]) != RT_EOK)

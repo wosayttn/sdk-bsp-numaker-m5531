@@ -14,7 +14,7 @@
 #include "rthw.h"
 
 #include "drv_uart.h"
-#include "drv_gpio.h"
+#include "drv_common.h"
 #include "board.h"
 
 #define LOG_TAG    "drv.common"
@@ -31,9 +31,6 @@ RT_WEAK void rt_hw_board_init(void)
 {
     /* Unlock protected registers */
     SYS_UnlockReg();
-
-    /* Configure MPU memory region defined in mpu_config_M5531.h */
-    InitPreDefMPURegion(NULL, 0);
 
     /* Init System/modules clock */
     void nutool_modclkcfg_init();
@@ -102,9 +99,7 @@ void rt_hw_us_delay(rt_uint32_t us)
     }
 }
 
-#define NU_MFP_POS(PIN)   ((PIN % 4) * 8)
-#define NU_MFP_MSK(PIN)   (0x1ful << NU_MFP_POS(PIN))
-void nu_pin_set_function(rt_base_t pin, int data)
+void nu_pin_func(rt_base_t pin, int data)
 {
     uint32_t GPx_MFPx_org;
     uint32_t pin_index      = NU_GET_PINS(pin);

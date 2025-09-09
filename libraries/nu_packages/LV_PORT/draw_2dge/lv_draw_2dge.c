@@ -248,6 +248,8 @@ static int32_t _2dge_evaluate(lv_draw_unit_t *u, lv_draw_task_t *task)
         goto _2dge_evaluate_not_ok;
     }
 
+_2dge_evaluate_ok:
+
     if (task->preference_score > 70)
     {
         task->preference_score = 70;

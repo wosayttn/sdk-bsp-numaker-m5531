@@ -2,7 +2,9 @@
 
 ## 1. Introduction
 
-The NuMicro® M5531 series microcontrollers stand out for their exceptional performance in digital signal processing. They are equipped with an Arm® Cortex®-M55 processor running up to 220 MHz. The M5531 series MCU has up to 1.5 MB of SRAM and 2 MB of flash memory for on-chip storage and adopts OctoSPI and HyperBus interfaces to support the expansion of RAM and flash memory capacity. It supports a low power supply voltage range from 1.6V to 3.6V and can operate within a temperature range of -40°C to +105°C.
+The NuMicro® M5531 series microcontrollers stand out for their exceptional performance in digital signal processing. They are equipped with an Arm® Cortex®-M55 processor running up to 220 MHz.
+The M5531 series MCU has up to 1.5 MB of SRAM and 2 MB of flash memory for on-chip storage and adopts OctoSPI and HyperBus interfaces to support the expansion of RAM and flash memory capacity.
+It supports a low power supply voltage range from 1.6V to 3.6V and can operate within a temperature range of -40°C to +105°C.
 
 ### 1.1 MCU specification
 
@@ -12,7 +14,6 @@ The NuMicro® M5531 series microcontrollers stand out for their exceptional perf
 | Operation frequency | 220 MHz |
 | embedded Flash size | 2 MB, Dual Bank |
 | SRAM size | 1.5 MB |
-| RMII interface | Support 10/100 Mbps Ethernet |
 | Crypto engine |  TRNG, PRNG, AES, SHA/HMAC, RSA, and ECC crypto accelerator |
 
 ### 1.2 Interface
@@ -20,32 +21,20 @@ The NuMicro® M5531 series microcontrollers stand out for their exceptional perf
 | Interface |
 | -- |
 | Arduino UNO compatible extension connector |
-| MikroBus UNO compatible extension connector |
-| RJ45 Ethernet port |
 | USB 1.1 and 2.0 OTG ports |
-| A microSD slot |
-| A 3.5mm Audio connector |
-| A CAN FD communication port |
 | Debug through SWD interface |
-| A LCD panel EBI interface |
-| A Camera Capture interface |
 
 ### 1.3 On-board devices
 
 | Device | Description | Driver supporting status |
 | -- | -- | -- |
-| HyperRAM | 64Mb, W956A8MBYA5I | Supported |
-| Ethernet PHY | RTL8201F | Supported |
-| Audio Codec | NAU88L22 | Supported |
-| Digital MIC | IM34DT05 | Supported |
+| | | |
 
 ### 1.4 Board extended module
 
 | Device | Description | Driver supporting status |
 | -- | -- | -- |
-| LCD with TPC Panel | LT7381, FT5446 | Supported |
-| LCD with TPC Panel | FSA506, ST1663I | Supported |
-| CCAP sensor modules | HM1055, ADV7280 | Supported |
+| | | |
 
 ## 2. Supported compiler
 
@@ -61,7 +50,8 @@ Support GCC and Keil MDK. More information of these compiler version as followin
 
 ### Step 1
 
-First, configure the switches on the NuMaker-M5531 board by setting switches No. 1 and 2 to the 'ON' position. Once configured, connect the NuMaker-M5531 board to your computer using a USB Micro cable. The Windows Device Manager will then display a 'NuMicro MCU' virtual disk, which you can use to burn the firmware.
+First, configure the switches on the NuMaker-M5531 board by setting switches No. 1 and 2 to the 'ON' position. Once configured, connect the NuMaker-M5531 board to your computer using a USB Micro cable.
+The Windows Device Manager will then display a 'NuMicro MCU' virtual disk, which you can use to burn the firmware.
 
 ![NuLinkMe2_SwitchSetting](./figures/NuLinkMe_SwitchSetting.png)
 
@@ -75,7 +65,8 @@ A simple method for firmware burning is to drag and drop the binary image file o
 
 ## 4. Test
 
-You can use the Tera Term terminal emulator (or any similar software) to enter RTT commands. The image below displays all serial communication parameters. You can also check the Windows Device Manager to find the corresponding port number for the Nuvoton Virtual COM Port.
+You can use the Tera Term terminal emulator (or any similar software) to enter RTT commands. The image below displays all serial communication parameters.
+You can also check the Windows Device Manager to find the corresponding port number for the Nuvoton Virtual COM Port.
 
 ![Serial settings](./figures/SerialSetting.png)
 

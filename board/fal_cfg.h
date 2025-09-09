@@ -13,22 +13,18 @@
 #ifndef _FAL_CFG_H_
 #define _FAL_CFG_H_
 
-#include "rtconfig.h"
-#include "board.h"
+#include <fal.h>
+#include "drv_fmc.h"
 
 /* ===================== Flash device Configuration ========================= */
 #if defined(FAL_PART_HAS_TABLE_CFG)
 
 #if defined(BSP_USING_FMC)
-    extern const struct fal_flash_dev Onchip_aprom_flash;
-    extern const struct fal_flash_dev Onchip_ldrom_flash;
-#endif
 
-#if defined(BSP_USING_FMC)
 #define FAL_FLASH_DEV_TABLE         \
 {                                   \
-    &Onchip_aprom_flash,            \
-    &Onchip_ldrom_flash,            \
+    &g_falFMC_AP,    \
+    &g_falFMC_LD,    \
 }
 #else
 #define FAL_FLASH_DEV_TABLE         \
@@ -36,10 +32,10 @@
 }
 #endif
 
-#define FAL_PART_TABLE                                                        \
-{                                                                             \
-    {FAL_PART_MAGIC_WORD,        "ldrom",     "OnChip_LDROM",                  0,        (24*1024), 0},  \
-    {FAL_PART_MAGIC_WORD,        "aprom",     "OnChip_APROM",            0x60000,        0x20000, 0},  \
+#define FAL_PART_TABLE                                                     \
+{                                                                          \
+    {FAL_PART_MAGIC_WORD, "ldrom",     "FMC_LD",  0x0,    (8*1024),   0},  \
+    {FAL_PART_MAGIC_WORD, "aprom",     "FMC_AP",  0x0,    (2*1024*1024), 0},  \
 }
 
 #endif /* FAL_PART_HAS_TABLE_CFG */

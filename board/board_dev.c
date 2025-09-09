@@ -11,243 +11,221 @@
 ******************************************************************************/
 
 #include <rtdevice.h>
-#include "board.h"
+#include "NuMicro.h"
+#include "drv_common.h"
 
-#if defined(BOARD_USING_NAU8822) && defined(NU_PKG_USING_NAU8822)
-#include "acodec_nau8822.h"
-S_NU_NAU8822_CONFIG sCodecConfig =
+#if defined(BOARD_USING_NUTFT_QSPI_FLASH)
+#if defined(RT_USING_SFUD)
+    #include "spi_flash.h"
+    #include "spi_flash_sfud.h"
+#endif
+#include "drv_qspi.h"
+
+#define W25X_REG_READSTATUS    (0x05)
+#define W25X_REG_READSTATUS2   (0x35)
+#define W25X_REG_WRITEENABLE   (0x06)
+#define W25X_REG_WRITESTATUS   (0x01)
+#define W25X_REG_QUADENABLE    (0x02)
+
+static rt_uint8_t SpiFlash_ReadStatusReg(struct rt_qspi_device *qspi_device)
 {
-    .i2c_bus_name = "i2c3",
+    rt_uint8_t u8Val;
+    rt_err_t result = RT_EOK;
+    rt_uint8_t w25x_txCMD1 = W25X_REG_READSTATUS;
 
-    .i2s_bus_name = "sound0",
+    result = rt_qspi_send_then_recv(qspi_device, &w25x_txCMD1, 1, &u8Val, 1);
+    RT_ASSERT(result > 0);
 
-    .pin_phonejack_en = NU_GET_PININDEX(NU_PD, 1),
+    return u8Val;
+}
 
-    .pin_phonejack_det = NU_GET_PININDEX(NU_PD, 0),
-};
-
-int rt_hw_nau8822_port(void)
+static rt_uint8_t SpiFlash_ReadStatusReg2(struct rt_qspi_device *qspi_device)
 {
-    if (nu_hw_nau8822_init(&sCodecConfig) != RT_EOK)
+    rt_uint8_t u8Val;
+    rt_err_t result = RT_EOK;
+    rt_uint8_t w25x_txCMD1 = W25X_REG_READSTATUS2;
+
+    result = rt_qspi_send_then_recv(qspi_device, &w25x_txCMD1, 1, &u8Val, 1);
+    RT_ASSERT(result > 0);
+
+    return u8Val;
+}
+
+static rt_err_t SpiFlash_WriteStatusReg(struct rt_qspi_device *qspi_device, uint8_t u8Value1, uint8_t u8Value2)
+{
+    rt_uint8_t w25x_txCMD1;
+    rt_uint8_t au8Val[2];
+    rt_err_t result;
+    struct rt_qspi_message qspi_message = {0};
+
+    /* Enable WE */
+    w25x_txCMD1 = W25X_REG_WRITEENABLE;
+    result = rt_qspi_send(qspi_device, &w25x_txCMD1, sizeof(w25x_txCMD1));
+    if (result != sizeof(w25x_txCMD1))
+        goto exit_SpiFlash_WriteStatusReg;
+
+    /* Prepare status-1, 2 data */
+    au8Val[0] = u8Value1;
+    au8Val[1] = u8Value2;
+
+    /* 1-bit mode: Instruction+payload */
+    qspi_message.instruction.content = W25X_REG_WRITESTATUS;
+    qspi_message.instruction.qspi_lines = 1;
+
+    qspi_message.qspi_data_lines   = 1;
+    qspi_message.parent.cs_take    = 1;
+    qspi_message.parent.cs_release = 1;
+    qspi_message.parent.send_buf   = &au8Val[0];
+    qspi_message.parent.length     = sizeof(au8Val);
+    qspi_message.parent.next       = RT_NULL;
+
+    if (rt_qspi_transfer_message(qspi_device, &qspi_message) != sizeof(au8Val))
+    {
+        result = -RT_ERROR;
+    }
+
+    result  = RT_EOK;
+
+exit_SpiFlash_WriteStatusReg:
+
+    return result;
+}
+
+static void SpiFlash_WaitReady(struct rt_qspi_device *qspi_device)
+{
+    volatile uint8_t u8ReturnValue;
+
+    do
+    {
+        u8ReturnValue = SpiFlash_ReadStatusReg(qspi_device);
+        u8ReturnValue = u8ReturnValue & 1;
+    }
+    while (u8ReturnValue != 0);   // check the BUSY bit
+}
+
+static void SpiFlash_EnterQspiMode(struct rt_qspi_device *qspi_device)
+{
+    rt_err_t result = RT_EOK;
+
+    uint8_t u8Status1 = SpiFlash_ReadStatusReg(qspi_device);
+    uint8_t u8Status2 = SpiFlash_ReadStatusReg2(qspi_device);
+
+    u8Status2 |= W25X_REG_QUADENABLE;
+
+    result = SpiFlash_WriteStatusReg(qspi_device, u8Status1, u8Status2);
+    RT_ASSERT(result == RT_EOK);
+
+    SpiFlash_WaitReady(qspi_device);
+}
+
+static void SpiFlash_ExitQspiMode(struct rt_qspi_device *qspi_device)
+{
+    rt_err_t result = RT_EOK;
+    uint8_t u8Status1 = SpiFlash_ReadStatusReg(qspi_device);
+    uint8_t u8Status2 = SpiFlash_ReadStatusReg2(qspi_device);
+
+    u8Status2 &= ~W25X_REG_QUADENABLE;
+
+    result = SpiFlash_WriteStatusReg(qspi_device, u8Status1, u8Status2);
+    RT_ASSERT(result == RT_EOK);
+
+    SpiFlash_WaitReady(qspi_device);
+}
+
+static int rt_hw_spiflash_init(void)
+{
+    /* Here, we use Dual I/O to drive the SPI flash by default. */
+    /* If you want to use Quad I/O, you can modify to 4 from 2 and crossover D2/D3 pin of SPI flash. */
+    if (nu_qspi_bus_attach_device("qspi0", "qspi01", 4, SpiFlash_EnterQspiMode, SpiFlash_ExitQspiMode) != RT_EOK)
         return -1;
 
+#if defined(RT_USING_SFUD)
+    if (rt_sfud_flash_probe(FAL_USING_NOR_FLASH_DEV_NAME, "qspi01") == RT_NULL)
+    {
+        return -(RT_ERROR);
+    }
+#endif
     return 0;
 }
-INIT_COMPONENT_EXPORT(rt_hw_nau8822_port);
-#endif /* BOARD_USING_NAU8822 */
+INIT_COMPONENT_EXPORT(rt_hw_spiflash_init);
+#endif /* BOARD_USING_NUTFT_QSPI_FLASH */
 
-#if defined(BOARD_USING_LCD_LT7381) && defined(NU_PKG_USING_LT7381_EBI)
-#include "drv_ebi.h"
-#include "lcd_lt7381.h"
+
+#if defined(BOARD_USING_NUTFT_ADC_TOUCH) && defined(NU_PKG_USING_ADC_TOUCH_SW)
+
+#include "adc_touch.h"
+#include "touch_sw.h"
+
+//S_CALIBRATION_MATRIX g_sCalMat = { 36, 6227, -2817292, 4936, -37, -1969986, 65536 };
+S_CALIBRATION_MATRIX g_sCalMat = { 97, 6214, -3216652, 4844, -30, -2333200, 65536 };
+
+static void tp_switch_to_analog(rt_base_t pin)
+{
+    GPIO_T *port = (GPIO_T *)(GPIOA_BASE + (0x40) * NU_GET_PORT(pin));
+
+    nu_pin_func(pin, (1 << NU_MFP_POS(NU_GET_PINS(pin))));
+
+    /* Disable the digital input path to avoid the leakage current. */
+    /* Disable digital path on these ADC pin */
+    GPIO_DISABLE_DIGITAL_PATH(port, NU_GET_PIN_MASK(NU_GET_PINS(pin)));
+}
+
+static void tp_switch_to_digital(rt_base_t pin)
+{
+    GPIO_T *port = (GPIO_T *)(GPIOA_BASE + (0x40) * NU_GET_PORT(pin));
+
+    nu_pin_func(pin, 0);
+
+    /* Enable digital path on these ADC pins */
+    GPIO_ENABLE_DIGITAL_PATH(port, NU_GET_PIN_MASK(NU_GET_PINS(pin)));
+}
+
+static S_TOUCH_SW sADCTP =
+{
+    .adc_name    = "eadc0",
+    .i32ADCChnYU = 6,
+    .i32ADCChnXR = 9,
+    .pin =
+    {
+        NU_GET_PININDEX(NU_PB, 7), // XL
+        NU_GET_PININDEX(NU_PB, 6), // YU
+        NU_GET_PININDEX(NU_PB, 9), // XR
+        NU_GET_PININDEX(NU_PB, 8), // YD
+    },
+    .switch_to_analog  = tp_switch_to_analog,
+    .switch_to_digital = tp_switch_to_digital,
+};
+
+#endif /* defined(BOARD_USING_NUTFT_ADC_TOUCH) && defined(NU_PKG_USING_ADC_TOUCH_SW) */
+
+#if defined(BOARD_USING_LCD_ILI9341) && defined(NU_PKG_USING_ILI9341_SPI)
+
+#include <lcd_ili9341.h>
 #if defined(PKG_USING_GUIENGINE)
     #include <rtgui/driver.h>
 #endif
-int rt_hw_lt7381_port(void)
+
+int rt_hw_ili9341_port(void)
 {
-    rt_err_t ret = RT_EOK;
-
-    /* Open ebi BOARD_USING_LT7381_EBI_PORT */
-    ret = nu_ebi_init(BOARD_USING_LT7381_EBI_PORT, EBI_BUSWIDTH_16BIT, EBI_TIMING_NORMAL, EBI_OPMODE_CACCESS | EBI_OPMODE_ADSEPARATE, EBI_CS_ACTIVE_LOW);
-    if (ret != RT_EOK)
-        return ret;
-
-    /* Optimization timing. */
-    EBI_SetBusTiming(BOARD_USING_LT7381_EBI_PORT, EBI_TCTL_RAHDOFF_Msk | EBI_TCTL_WAHDOFF_Msk | (4 << EBI_TCTL_TACC_Pos), EBI_MCLKDIV_2);
-
-    if (rt_hw_lcd_lt7381_ebi_init(EBI_BANK0_BASE_ADDR + BOARD_USING_LT7381_EBI_PORT * EBI_MAX_SIZE) != RT_EOK)
+    if (rt_hw_lcd_ili9341_spi_init("spi2", (void *)RT_NULL) != RT_EOK)
         return -1;
 
-    rt_hw_lcd_lt7381_init();
+    rt_hw_lcd_ili9341_init();
 
 #if defined(PKG_USING_GUIENGINE)
-    rt_device_t lcd_lt7381 = rt_device_find("lcd");
-    if (lcd_lt7381)
+    rt_device_t lcd_ili9341;
+    lcd_ili9341 = rt_device_find("lcd");
+    if (lcd_ili9341)
     {
-        rtgui_graphic_set_device(lcd_lt7381);
+        rtgui_graphic_set_device(lcd_ili9341);
     }
 #endif
 
-    rt_kprintf("BOARD_USING_LT7381_EBI_PORT: %d\n", BOARD_USING_LT7381_EBI_PORT);
-    rt_kprintf("BOARD_USING_LT7381_PIN_RESET: %d, (P%c%d)\n",
-               BOARD_USING_LT7381_PIN_RESET,
-               'A' + NU_GET_PORT(BOARD_USING_LT7381_PIN_RESET),
-               NU_GET_PINS(BOARD_USING_LT7381_PIN_RESET));
-    rt_kprintf("BOARD_USING_LT7381_PIN_BACKLIGHT: %d, (P%c%d)\n",
-               BOARD_USING_LT7381_PIN_BACKLIGHT,
-               'A' + NU_GET_PORT(BOARD_USING_LT7381_PIN_BACKLIGHT),
-               NU_GET_PINS(BOARD_USING_LT7381_PIN_BACKLIGHT));
-
-    return 0;
-}
-INIT_COMPONENT_EXPORT(rt_hw_lt7381_port);
-#endif /* BOARD_USING_LCD_LT7381 */
-
-#if defined(BOARD_USING_FT5446) && defined(NU_PKG_USING_TPC_FT5446)
-#include "ft5446.h"
-
-#define FT5446_RST_PIN   NU_GET_PININDEX(NU_PD, 10)
-#define FT5446_IRQ_PIN   NU_GET_PININDEX(NU_PF, 6)
-
-extern int tpc_sample(const char *name);
-int rt_hw_ft5446_port(void)
-{
-    struct rt_touch_config cfg;
-    rt_base_t rst_pin = FT5446_RST_PIN;
-    cfg.dev_name = "i2c1";
-    cfg.irq_pin.pin = FT5446_IRQ_PIN;
-    cfg.irq_pin.mode = PIN_MODE_INPUT_PULLUP;
-    cfg.user_data = &rst_pin;
-
-    rt_hw_ft5446_init("ft5446", &cfg);
-    return tpc_sample("ft5446");
-
-}
-INIT_ENV_EXPORT(rt_hw_ft5446_port);
-#endif /* #if defined(BOARD_USING_FT5446) && defined(NU_PKG_USING_TPC_FT5446) */
-
-#if defined(BOARD_USING_LCD_FSA506) && defined(NU_PKG_USING_FSA506_EBI)
-#include "drv_ebi.h"
-#include "lcd_fsa506.h"
-#if defined(PKG_USING_GUIENGINE)
-    #include <rtgui/driver.h>
-#endif
-int rt_hw_fsa506_port(void)
-{
-    rt_err_t ret = RT_EOK;
-
-    /* Open ebi BOARD_USING_FSA506_EBI_PORT */
-    ret = nu_ebi_init(BOARD_USING_FSA506_EBI_PORT, EBI_BUSWIDTH_16BIT, EBI_TIMING_SLOW, EBI_OPMODE_CACCESS | EBI_OPMODE_ADSEPARATE, EBI_CS_ACTIVE_LOW);
-    if (ret != RT_EOK)
-        return ret;
-
-    if (rt_hw_lcd_fsa506_ebi_init(EBI_BANK0_BASE_ADDR + BOARD_USING_FSA506_EBI_PORT * EBI_MAX_SIZE) != RT_EOK)
-        return -1;
-
-    rt_hw_lcd_fsa506_init();
-
-#if defined(PKG_USING_GUIENGINE)
-    rt_device_t lcd_fsa506 = rt_device_find("lcd");
-    if (lcd_fsa506)
-    {
-        rtgui_graphic_set_device(lcd_fsa506);
-    }
+#if defined(BOARD_USING_NUTFT_ADC_TOUCH) && defined(NU_PKG_USING_ADC_TOUCH_SW)
+    nu_adc_touch_sw_register(&sADCTP);
 #endif
 
-    rt_kprintf("BOARD_USING_FSA506_EBI_PORT: %d\n", BOARD_USING_FSA506_EBI_PORT);
-    rt_kprintf("BOARD_USING_FSA506_PIN_RESET: %d, (P%c%d)\n",
-               BOARD_USING_FSA506_PIN_RESET,
-               'A' + NU_GET_PORT(BOARD_USING_FSA506_PIN_RESET),
-               NU_GET_PINS(BOARD_USING_FSA506_PIN_RESET));
-    rt_kprintf("BOARD_USING_FSA506_PIN_BACKLIGHT: %d, (P%c%d)\n",
-               BOARD_USING_FSA506_PIN_BACKLIGHT,
-               'A' + NU_GET_PORT(BOARD_USING_FSA506_PIN_BACKLIGHT),
-               NU_GET_PINS(BOARD_USING_FSA506_PIN_BACKLIGHT));
-
     return 0;
 }
-INIT_COMPONENT_EXPORT(rt_hw_fsa506_port);
-#endif /* BOARD_USING_LCD_FSA506 */
-
-#if defined(BOARD_USING_ST1663I) && defined(NU_PKG_USING_TPC_ST1663I)
-#include "st1663i.h"
-
-#define ST1663I_RST_PIN   NU_GET_PININDEX(NU_PD, 10)
-#define ST1663I_IRQ_PIN   NU_GET_PININDEX(NU_PF, 6)
-
-extern int tpc_sample(const char *name);
-int rt_hw_st1663i_port(void)
-{
-    struct rt_touch_config cfg;
-    rt_base_t rst_pin = ST1663I_RST_PIN;
-    cfg.dev_name = "i2c1";
-    cfg.irq_pin.pin = ST1663I_IRQ_PIN;
-    cfg.irq_pin.mode = PIN_MODE_INPUT_PULLUP;
-    cfg.user_data = &rst_pin;
-
-    rt_hw_st1663i_init("st1663i", &cfg);
-    return tpc_sample("st1663i");
-
-}
-INIT_ENV_EXPORT(rt_hw_st1663i_port);
-#endif /* if defined(BOARD_USING_ST1663I) && defined(NU_PKG_USING_TPC_ST1663I) */
-
-#if defined(BOARD_USING_SENSOR0)
-#include "ccap_sensor.h"
-
-#define SENSOR0_RST_PIN    NU_GET_PININDEX(NU_PG, 11)
-#define SENSOR0_PD_PIN     NU_GET_PININDEX(NU_PD, 12)
-
-ccap_sensor_io sIo_sensor0 =
-{
-    .RstPin          = SENSOR0_RST_PIN,
-    .PwrDwnPin       = SENSOR0_PD_PIN,
-    .I2cName         = "i2c0"
-};
-
-int rt_hw_sensor0_port(void)
-{
-    rt_kprintf("SENSOR0_RST_PIN: %d, (P%c%d)\n",
-               SENSOR0_RST_PIN,
-               'A' + NU_GET_PORT(SENSOR0_RST_PIN),
-               NU_GET_PINS(SENSOR0_RST_PIN));
-    rt_kprintf("SENSOR0_PD_PIN: %d, (P%c%d)\n",
-               SENSOR0_PD_PIN,
-               'A' + NU_GET_PORT(SENSOR0_PD_PIN),
-               NU_GET_PINS(SENSOR0_PD_PIN));
-
-    return  nu_ccap_sensor_create(&sIo_sensor0, (ccap_sensor_id)BOARD_USING_SENSON0_ID, "sensor0");
-}
-INIT_COMPONENT_EXPORT(rt_hw_sensor0_port);
-
-#endif /* BOARD_USING_SENSOR0 */
-
-#if defined(BOARD_USING_MPU6500) && defined(PKG_USING_MPU6XXX)
-
-#include "sensor_inven_mpu6xxx.h"
-
-int rt_hw_mpu6xxx_port(void)
-{
-    struct rt_sensor_config cfg;
-    rt_base_t mpu_int = NU_GET_PININDEX(NU_PB, 2);
-
-    cfg.intf.dev_name = "lpi2c0";
-    cfg.intf.arg = (void *)MPU6XXX_ADDR_DEFAULT;
-    cfg.irq_pin.pin = mpu_int;
-
-    return rt_hw_mpu6xxx_init("mpu", &cfg);
-}
-INIT_APP_EXPORT(rt_hw_mpu6xxx_port);
-#endif /* BOARD_USING_MPU6500 */
-
-
-#if defined(BOARD_USING_ESP8266)
-
-static int rt_hw_esp8266_port(void)
-{
-    rt_base_t esp_rst_pin = NU_GET_PININDEX(NU_PI, 13);
-
-    /* ESP8266 reset pin PI.13 */
-    rt_pin_mode(esp_rst_pin, PIN_MODE_OUTPUT);
-    rt_pin_write(esp_rst_pin, 1);
-
-    return 0;
-}
-INIT_COMPONENT_EXPORT(rt_hw_esp8266_port);
-
-#endif /* BOARD_USING_ESP8266  */
-
-#include "drv_sys.h"
-static S_NU_REG s_NuReg_arr[] =
-{
-    /* PDMA0/1 */
-    NUREG_EXPORT(CLK_PDMACTL, CLK_PDMACTL_PDMA0CKEN_Msk, CLK_PDMACTL_PDMA0CKEN_Msk),
-    NUREG_EXPORT(CLK_PDMACTL, CLK_PDMACTL_PDMA1CKEN_Msk, CLK_PDMACTL_PDMA1CKEN_Msk),
-
-    {0}
-};
-
-void nu_check_register(void)
-{
-    nu_sys_check_register(&s_NuReg_arr[0]);
-}
-MSH_CMD_EXPORT(nu_check_register, Check registers);
+INIT_COMPONENT_EXPORT(rt_hw_ili9341_port);
+#endif /* defined(BOARD_USING_LCD_ILI9341) && defined(NU_PKG_USING_ILI9341_SPI) */

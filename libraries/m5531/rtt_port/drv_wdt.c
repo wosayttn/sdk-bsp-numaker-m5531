@@ -319,10 +319,6 @@ static uint32_t wdt_get_working_hz(void)
         hz = __LXT;
         break;
 
-    case CLK_WDTSEL_WDT0SEL_HCLK2_DIV2048:
-        hz = CLK_GetHCLK2Freq() / 2048;
-        break;
-
     default:
         break;
     }
