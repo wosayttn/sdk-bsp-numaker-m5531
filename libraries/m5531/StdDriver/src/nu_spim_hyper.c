@@ -133,13 +133,6 @@ static void SPIM_HYPER_AdjustPowerLevelForHyperBus(void)
 {
     volatile int32_t i32TimeOutCnt = (SystemCoreClock >> 1); /* 500ms time-out */
     uint32_t u32MLDOPL0 = 0;
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel)
-    {
-        /* Unlock protected registers */
-        SYS_UnlockReg();
-    }
 
     /*
         Raise PL0 voltage level (MLDOPL0) by predefined offset to reach ~ 1.2V,
@@ -175,12 +168,6 @@ static void SPIM_HYPER_AdjustPowerLevelForHyperBus(void)
     /* Increase DLL0 output voltage by predefined offset to reach ~1.2V for better timing margin */
     u32MLDOPL0 = (SPIM_HYPER_GET_DLLTCTL_DLL0OLDOTRIM() + SPIM_HYPER_DLLTCTL_TRIM_OFFSET);
     SPIM_HYPER_SET_DLLTCTL_DLL0OLDOTRIM(u32MLDOPL0);
-
-    if (u32RegLockLevel)
-    {
-        /* Lock protected registers */
-        SYS_LockReg();
-    }
 }
 
 /**
@@ -553,9 +540,6 @@ int32_t SPIM_HYPER_INIT_DLL(SPIM_T *spim)
     uint32_t u32FastEn = (u32FreqMHz <= 100) ? SPIM_HYPER_OP_DISABLE : SPIM_HYPER_OP_ENABLE;
 
     uint32_t u32DllDivCode = (u32Div <= 1) ? 0 : (u32Div == 2) ? 1 : (u32Div == 4) ? 2 : 3;
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel) SYS_UnlockReg();
 
     // DLL timing setup
     SPIM_HYPER_SET_DLLLOCK_NUM(spim, u32DLLLKNUM);
@@ -618,8 +602,6 @@ int32_t SPIM_HYPER_INIT_DLL(SPIM_T *spim)
     SPIM_HYPER_DISABLE_SYSDLL0ATCTL0_TRIMUPDOFF();
     SPIM_HYPER_SET_INTERNAL_RWDS(spim, SPIM_HYPER_OP_DISABLE);
 #endif
-
-    if (u32RegLockLevel) SYS_LockReg();
 
     return SPIM_HYPER_OK;
 }

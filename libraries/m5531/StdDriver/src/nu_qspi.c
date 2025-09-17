@@ -174,14 +174,6 @@ uint32_t QSPI_Open(QSPI_T *qspi, uint32_t u32MasterSlave, uint32_t u32QSPIMode, 
   */
 void QSPI_Close(QSPI_T *qspi)
 {
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel)
-    {
-        /* Unlock protected registers */
-        SYS_UnlockReg();
-    }
-
     /* Reset QSPI */
     if (qspi == QSPI0)
     {
@@ -190,12 +182,6 @@ void QSPI_Close(QSPI_T *qspi)
     else if (qspi == QSPI1)
     {
         SYS_ResetModule(SYS_QSPI1RST);
-    }
-
-    if (u32RegLockLevel)
-    {
-        /* Lock protected registers */
-        SYS_LockReg();
     }
 }
 

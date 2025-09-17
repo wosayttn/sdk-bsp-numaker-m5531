@@ -260,6 +260,7 @@ static void nu_pdma_spi_rx_cb_event(void *pvUserData, uint32_t u32EventFilter)
 {
     rt_err_t result;
     struct nu_spi *spi_bus = (struct nu_spi *)pvUserData;
+
     RT_ASSERT(spi_bus);
 
     result = rt_sem_release(spi_bus->m_psSemBus);
@@ -724,10 +725,11 @@ static int rt_hw_spi_init(void)
     for (i = (SPI_START + 1); i < SPI_CNT; i++)
     {
         SYS_ResetModule(nu_spi_arr[i].rstidx);
-        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].name);
+
 #if defined(BSP_USING_SPI_PDMA)
         nu_spi_arr[i].pdma_chanid_tx = -1;
         nu_spi_arr[i].pdma_chanid_rx = -1;
+
         if ((nu_spi_arr[i].pdma_perp_tx != NU_PDMA_UNUSED) && (nu_spi_arr[i].pdma_perp_rx != NU_PDMA_UNUSED))
         {
             if (nu_hw_spi_pdma_allocate(&nu_spi_arr[i]) != RT_EOK)
@@ -739,6 +741,7 @@ static int rt_hw_spi_init(void)
         nu_spi_arr[i].dummy = rt_malloc_align(RT_ALIGN_SIZE, RT_ALIGN_SIZE);
         RT_ASSERT(nu_spi_arr[i].dummy);
 #endif
+        nu_spi_register_bus(&nu_spi_arr[i], nu_spi_arr[i].name);
     }
 
     return 0;

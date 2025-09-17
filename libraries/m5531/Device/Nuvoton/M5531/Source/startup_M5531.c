@@ -464,13 +464,7 @@ __NO_RETURN void Reset_Handler(void)
     if (SCU_IS_CPU_NS(SCU_NS) == 0)
     {
         /* Unlock protected registers */
-        do
-        {
-            SYS->REGLCTL = 0x59UL;
-            SYS->REGLCTL = 0x16UL;
-            SYS->REGLCTL = 0x88UL;
-        }
-        while (SYS->REGLCTL == 0UL);
+        SYS_UnlockReg();
 
         PMC_SetSRAMPowerMode(PMC_SYSRB0PC_SRAM0PMS_Msk |
                              PMC_SYSRB0PC_SRAM1PMS_Msk |

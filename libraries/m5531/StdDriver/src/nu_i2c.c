@@ -70,14 +70,6 @@ uint32_t I2C_Open(I2C_T *i2c, uint32_t u32BusClock)
 
 void I2C_Close(I2C_T *i2c)
 {
-    uint32_t u32IsRegLocked;
-    u32IsRegLocked = SYS_IsRegLocked();
-
-    if (u32IsRegLocked)
-    {
-        SYS_UnlockReg();
-    }
-
     /* Reset I2C Controller */
     if (i2c == I2C0)
     {
@@ -102,11 +94,6 @@ void I2C_Close(I2C_T *i2c)
 
     /* Disable I2C */
     i2c->CTL0 &= ~I2C_CTL0_I2CEN_Msk;
-
-    if (u32IsRegLocked)
-    {
-        SYS_LockReg();
-    }
 }
 
 /**

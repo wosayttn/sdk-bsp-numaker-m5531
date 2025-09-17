@@ -87,9 +87,6 @@ int nu_fmc_read(long addr, uint8_t *buf, size_t size)
     uint32_t isp_rdata = 0;
     rt_mutex_take(g_mutex_fmc, RT_WAITING_FOREVER);
 
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-    SYS_UnlockReg();
-
     // If address is not word-aligned, read the aligned word first
     if (NU_GET_LSB2BIT(addr))
         isp_rdata = FMC_Read(NU_GET_WALIGN(addr));
@@ -114,9 +111,6 @@ int nu_fmc_read(long addr, uint8_t *buf, size_t size)
         read_size++;
     }
 
-    if (u32RegLockBackup)
-        SYS_LockReg();
-
     rt_mutex_release(g_mutex_fmc);
     return read_size;
 }
@@ -136,9 +130,6 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
     uint32_t isp_rdata = 0;
 
     rt_mutex_take(g_mutex_fmc, RT_WAITING_FOREVER);
-
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-    SYS_UnlockReg();
 
     if (addr < FMC_APROM_END)
         FMC_ENABLE_AP_UPDATE();
@@ -184,8 +175,6 @@ int nu_fmc_write(long addr, const uint8_t *buf, size_t size)
     FMC_DISABLE_AP_UPDATE();
     FMC_DISABLE_LD_UPDATE();
 Exit2:
-    if (u32RegLockBackup)
-        SYS_LockReg();
 
     rt_mutex_release(g_mutex_fmc);
     return write_size;
@@ -245,8 +234,6 @@ int nu_fmc_erase(long addr, size_t size)
 #endif
 
     rt_mutex_take(g_mutex_fmc, RT_WAITING_FOREVER);
-    u32RegLockBackup = SYS_IsRegLocked();
-    SYS_UnlockReg();
 
     // Enable APROM, LDROM or DATAFLASH update depending on address
     if (addr <= FMC_APROM_END)
@@ -270,8 +257,6 @@ Exit1:
     FMC_DISABLE_AP_UPDATE();
     FMC_DISABLE_LD_UPDATE();
 Exit2:
-    if (u32RegLockBackup)
-        SYS_LockReg();
 
     rt_mutex_release(g_mutex_fmc);
 
@@ -342,13 +327,7 @@ static int ldrom_erase(long offset, size_t size)
 
 static int nu_fmc_init(void)
 {
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-
-    SYS_UnlockReg();
     FMC_ENABLE_ISP();
-
-    if (u32RegLockBackup)
-        SYS_LockReg();
 
     g_mutex_fmc = rt_mutex_create("nu_fmc_lock", RT_IPC_FLAG_PRIO);
     RT_ASSERT(g_mutex_fmc);

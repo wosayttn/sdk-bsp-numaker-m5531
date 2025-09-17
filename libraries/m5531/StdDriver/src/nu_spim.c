@@ -2620,12 +2620,8 @@ static int32_t _SPIM_SetDataPhase(SPIM_T *spim, uint32_t u32OPMode, uint32_t u32
  */
 static void SPIM_AdjustPowerLevelForDQS(void)
 {
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
     uint32_t u32MLDOPL0;
     volatile int32_t i32TimeOutCnt = (SystemCoreClock >> 1); /* 500ms time-out */
-
-    /* Unlock protected registers */
-    if (u32RegLockLevel) SYS_UnlockReg();
 
     /*
         Raise PL0 voltage level (MLDOPL0) by predefined offset to reach ~1.2V,
@@ -2658,9 +2654,6 @@ static void SPIM_AdjustPowerLevelForDQS(void)
     /* Increase DLL0 output voltage by predefined offset to reach ~1.2V for better timing margin */
     u32MLDOPL0 = (SPIM_GET_DLLTCTL_DLL0OLDOTRIM() + SPIM_DLLTCTL_TRIM_OFFSET);
     SPIM_SET_DLLTCTL_DLL0OLDOTRIM(u32MLDOPL0);
-
-    /* Lock protected registers */
-    if (u32RegLockLevel) SYS_LockReg();
 }
 
 /**
@@ -3159,9 +3152,6 @@ int32_t SPIM_INIT_DLL(SPIM_T *spim)
     uint32_t u32FastEn = (u32FreqMHz <= 100) ? SPIM_OP_DISABLE : SPIM_OP_ENABLE;
 
     uint32_t u32DllDivCode = (u32Div <= 1) ? 0 : (u32Div == 2) ? 1 : (u32Div == 4) ? 2 : 3;
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel) SYS_UnlockReg();
 
     // DLL timing setup
     SPIM_SET_DLLLOCK_NUM(spim, u32DLLLKNUM);
@@ -3239,8 +3229,6 @@ int32_t SPIM_INIT_DLL(SPIM_T *spim)
 
     SPIM_SET_INTERNAL_RWDS(spim, SPIM_OP_DISABLE);
 #endif
-
-    if (u32RegLockLevel) SYS_LockReg();
 
     return SPIM_OK;
 }

@@ -155,24 +155,10 @@ uint32_t LPSPI_Open(LPSPI_T *lpspi, uint32_t u32MasterSlave, uint32_t u32LPSPIMo
   */
 void LPSPI_Close(LPSPI_T *lpspi)
 {
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel)
-    {
-        /* Unlock protected registers */
-        SYS_UnlockReg();
-    }
-
     if (lpspi == LPSPI0)
     {
         /* Reset LPSPI */
         SYS_ResetModule(SYS_LPSPI0RST);
-    }
-
-    if (u32RegLockLevel)
-    {
-        /* Lock protected registers */
-        SYS_LockReg();
     }
 }
 

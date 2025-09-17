@@ -404,13 +404,6 @@ void SDH_Set_clock(SDH_T *sdh, uint32_t u32SD_clk_khz)
     uint32_t u32Rate, u32Div1;
     static uint32_t u32SD_ClkSrc = 0ul, u32SD_PwrCtl = 0ul;
 
-    uint32_t u32RegLockLevel = SYS_IsRegLocked();
-
-    if (u32RegLockLevel)
-    {
-        SYS_UnlockReg();
-    }
-
     /* initial state, clock source use HIRC */
     if (u32SD_clk_khz <= 400ul)
     {
@@ -541,11 +534,6 @@ void SDH_Set_clock(SDH_T *sdh, uint32_t u32SD_clk_khz)
     {
         CLK->SDHDIV &= ~CLK_SDHDIV_SDH1DIV_Msk;
         CLK->SDHDIV |= (u32Div1 << CLK_SDHDIV_SDH1DIV_Pos);
-    }
-
-    if (u32RegLockLevel)
-    {
-        SYS_LockReg();
     }
 
     return;

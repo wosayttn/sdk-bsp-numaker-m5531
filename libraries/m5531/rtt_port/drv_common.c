@@ -29,9 +29,6 @@
  */
 RT_WEAK void rt_hw_board_init(void)
 {
-    /* Unlock protected registers */
-    SYS_UnlockReg();
-
     /* Init System/modules clock */
     void nutool_modclkcfg_init();
     nutool_modclkcfg_init();
@@ -115,10 +112,6 @@ void nu_pin_func(rt_base_t pin, int data)
 
 void nu_read_uid(uint32_t *id)
 {
-    uint32_t u32RegLockBackup = SYS_IsRegLocked();
-
-    SYS_UnlockReg();
-
     /* Enable FMC ISP function */
     FMC_Open();
 
@@ -130,9 +123,6 @@ void nu_read_uid(uint32_t *id)
 
     /* Disable FMC ISP function */
     FMC_Close();
-
-    if (u32RegLockBackup)
-        SYS_LockReg();
 }
 
 /**
@@ -152,8 +142,6 @@ void SysTick_Handler(void)
 
 void rt_hw_cpu_reset(void)
 {
-    SYS_UnlockReg();
-
     SYS_ResetChip();
 }
 

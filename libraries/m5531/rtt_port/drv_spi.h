@@ -35,10 +35,10 @@ struct nu_spi
     uint32_t rstidx;
     uint32_t* dummy;
 #if defined(BSP_USING_SPI_PDMA)
-    uint32_t  pdma_perp_tx;
-    uint32_t  pdma_chanid_tx;
-    uint32_t  pdma_perp_rx;
-    uint32_t  pdma_chanid_rx;
+    int32_t  pdma_perp_tx;
+    int32_t  pdma_chanid_tx;
+    int32_t  pdma_perp_rx;
+    int32_t  pdma_chanid_rx;
     rt_sem_t  m_psSemBus;
 #endif
     struct rt_qspi_configuration  configuration;

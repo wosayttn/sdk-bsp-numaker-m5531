@@ -644,6 +644,7 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
 {
     nu_pdma_periph_ctl_t *psPeriphCtl = NULL;
     PDMA_T *PDMA = NULL;
+    int isPdmaDescReg = 0;
 
     uint32_t u32SrcCtl = 0;
     uint32_t u32DstCtl = 0;
@@ -663,6 +664,15 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
 
     PDMA = NU_PDMA_GET_BASE(i32ModChnID);
 
+    for (int i = 0; i < PDMA_CH_MAX; i++)
+    {
+        if ((nu_pdma_desc_t)&PDMA->DSCT[i] == dma_desc)
+        {
+            isPdmaDescReg = 1;
+            break;
+        }
+    }
+
     psPeriphCtl = &nu_pdma_chn_arr[NU_PDMA_GET_ARRAY_IDX(i32ModChnID)].m_spPeripCtl;
 
     nu_pdma_channel_memctrl_fill(psPeriphCtl->m_eMemCtl, &u32SrcCtl, &u32DstCtl);
@@ -671,7 +681,7 @@ rt_err_t nu_pdma_desc_setup(int i32ModChnID, nu_pdma_desc_t dma_desc, uint32_t u
                     ((u32DataWidth == 8) ? PDMA_WIDTH_8 : (u32DataWidth == 16) ? PDMA_WIDTH_16 : PDMA_WIDTH_32) |
                     u32SrcCtl |
                     u32DstCtl |
-                    PDMA_OP_BASIC;
+                    ((isPdmaDescReg) ? PDMA_OP_STOP : PDMA_OP_BASIC);
 
     dma_desc->SA = u32AddrSrc;
     dma_desc->DA = u32AddrDst;

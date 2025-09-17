@@ -221,9 +221,6 @@ uint32_t SPI_Open(SPI_T *spi, uint32_t u32MasterSlave, uint32_t u32SPIMode, uint
   */
 void SPI_Close(SPI_T *spi)
 {
-    /* Unlock protected registers */
-    SYS_UnlockReg();
-
     /* Reset SPI */
     if (spi == SPI0)
     {
@@ -241,9 +238,6 @@ void SPI_Close(SPI_T *spi)
     {
         SYS_ResetModule(SYS_SPI3RST);
     }
-
-    /* Lock protected registers */
-    SYS_LockReg();
 }
 
 /**
