@@ -120,9 +120,6 @@ void nu_read_uid(uint32_t *id)
     id[1] = FMC_ReadUID(1);
     id[2] = FMC_ReadUID(2);
     id[3] = 0;
-
-    /* Disable FMC ISP function */
-    FMC_Close();
 }
 
 /**
